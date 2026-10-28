@@ -8,6 +8,15 @@ This free sample contains the rig doctor lite footprint score and the orchestrat
 python doctor/doctor.py --lite
 ```
 
+To install the orchestration protocol as a Claude Code skill from this repo's plugin marketplace:
+
+```sh
+/plugin marketplace add commonrig/commonrig-sample
+/plugin install commonrig-orchestration@commonrig
+```
+
+On Claude Code 2.1.275 or later one line does both: `/plugin install commonrig-orchestration --marketplace commonrig/commonrig-sample`. The skill is plain guidance in `skills/commonrig-orchestration/SKILL.md`: no scripts, no network calls.
+
 The lite score measures the footprint of your local agent setup. It is not a certification of correctness or security. Read doctor/SCORING.md for the scoring rules and protocols/orchestration.md for the working protocol.
 
 The paid kit adds rule sources and generation, setup and installation tools, enforcement hooks, ledger templates and tools, skills, configuration examples and the full doctor workflow.

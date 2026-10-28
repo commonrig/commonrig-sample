@@ -1,0 +1,15 @@
+{
+  "name": "commonrig-orchestration",
+  "version": "0.1.1",
+  "description": "The free CommonRig orchestration protocol as a skill: bounded briefs, disjoint ownership for parallel writers, no git writes in briefs, verification before claiming done.",
+  "author": {
+    "name": "CommonRig",
+    "email": "hello@commonrig.com",
+    "url": "https://commonrig.com"
+  },
+  "homepage": "https://commonrig.com",
+  "repository": "https://github.com/commonrig/commonrig-sample",
+  "license": "MIT",
+  "keywords": ["orchestration", "subagents", "claude-code", "codex", "agents-md"],
+  "skills": "./skills/"
+}

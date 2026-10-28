@@ -1,0 +1,20 @@
+{
+  "name": "commonrig",
+  "owner": {
+    "name": "CommonRig",
+    "email": "hello@commonrig.com"
+  },
+  "metadata": {
+    "description": "Free CommonRig sample for Claude Code: the orchestration protocol as a skill."
+  },
+  "plugins": [
+    {
+      "name": "commonrig-orchestration",
+      "source": "./",
+      "description": "Delegate coding work to subagents safely: bounded briefs, disjoint ownership for parallel writers, verification before done.",
+      "category": "development",
+      "homepage": "https://commonrig.com",
+      "license": "MIT"
+    }
+  ]
+}
