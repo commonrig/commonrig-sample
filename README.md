@@ -12,8 +12,8 @@ The lite score measures the footprint of your local agent setup. It is not a cer
 
 The paid kit adds rule sources and generation, setup and installation tools, enforcement hooks, ledger templates and tools, skills, configuration examples and the full doctor workflow.
 
-- Kit: A$29 one-off, including 3 months of updates.
-- Updates after the included period: A$5/month or A$49/year.
+- Kit: A$10 one-off, including 3 months of updates.
+- Updates after the included period: A$3/month or A$30/year.
 - Hosted full check: A$0.50.
 
 Details: https://commonrig.com
