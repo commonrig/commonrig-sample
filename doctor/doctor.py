@@ -1,5 +1,7 @@
 import argparse
+import bisect
 from collections import Counter
+import itertools
 import json
 import math
 import os
@@ -25,6 +27,11 @@ ASSIGN = re.compile(r"(?i)\b(?:pgpassword|password|passwd|pwd|token|api_key|apik
 BEARER = re.compile(r'''(?i)\bBearer\s+([^\s"');]{20,})''')
 PREFIX = re.compile(r"\b(?:sk-|ghp_|xox)[A-Za-z0-9_+-]+")
 LONG = re.compile(r"[A-Za-z0-9+/=_-]{32,}")
+CHAIN = re.compile(r"[A-Za-z0-9]+(?:[-_]{1,2}[A-Za-z0-9]+)+")
+LETTERS = re.compile(r"[A-Za-z]+")
+NOT_PATH_CHAR = re.compile(r"[^\w./-]")
+PATH_START = re.compile(r"[A-Za-z]:[\\/]|//|/|~/|\.\.?/")
+BOUNDARY = " \t\r\n\"'()"
 PID = re.compile(r"(?i)(?:-Id\s+\d+|/PID\s+\d+|kill\s+-9\s+\d+|findstr\s+\d{4,})\b")
 LOCAL = re.compile(r"(?i)localhost:\d+|127\.0\.0\.1|https?://192\.168\.\d+\.\d+")
 DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
@@ -35,23 +42,66 @@ RATES = (("tokens", 1, 30), ("dates", 1, 10), ("markers", 2, 10),
          ("home_paths", 0.5, 5), ("hooks", 5, 15))
 
 
+def word_chain(run):
+    # Linear form of [A-Za-z]+(?:[-_]{1,2}[A-Za-z0-9]{1,6})*(?:[-_]{1,2}[A-Za-z]+)+, which backtracks quadratically on
+    # long runs: letters first, a letters-only tail, segments of at most six between
+    if not CHAIN.fullmatch(run):
+        return False
+    segments = re.split(r"[-_]{1,2}", run)
+    if not LETTERS.fullmatch(segments[0]):
+        return False
+    last = len(segments) - 1
+    while last >= 1 and LETTERS.fullmatch(segments[last]):
+        last -= 1
+    return last < len(segments) - 1 and all(len(segment) <= 6 for segment in segments[1:last + 1])
+
+
+def ahead(find):
+    # First index at or after a start that only moves forward, cached while still ahead, so a whole scan stays O(n)
+    found = [-1]
+
+    def lookup(start):
+        if found[0] < start:
+            index = find(start)
+            found[0] = math.inf if index < 0 else index
+        return found[0]
+    return lookup
+
+
 def secret_spans(text):
     spans = [match.span(1) for pattern in (ASSIGN, BEARER) for match in pattern.finditer(text)]
     spans.extend(match.span() for match in PREFIX.finditer(text))
     for command in re.finditer(r"(?i)\bmysql\b[^;\r\n]*", text):
         for match in re.finditer(r"(?:^|\s)-p(" + VALUE + ")", command.group()):
             spans.append((command.start() + match.start(1), command.start() + match.end(1)))
+    # Long runs skip any span the patterns above found: sorted starts plus a running max end answer that by bisection
+    prior = sorted(spans)
+    starts, max_ends = [start for start, _ in prior], list(itertools.accumulate((end for _, end in prior), max))
+
+    def touches(start, end):
+        count = bisect.bisect_left(starts, end)
+        return count > 0 and max_ends[count - 1] > start
+    # Each run's token reaches back to the last boundary character; that start only moves forward, so the token
+    # tests are index lookups rather than a rescan of the token per run
+    backslash, mcp = ahead(lambda at: text.find("\\", at)), ahead(lambda at: text.find("mcp__", at))
+    slash, double = ahead(lambda at: text.find("/", at)), ahead(lambda at: text.find("//", at))
+    bad = ahead(lambda at: next((m.start() for m in [NOT_PATH_CHAR.search(text, at)] if m), -1))
+    scan = token_start = 0
     for match in LONG.finditer(text):
-        if any(start < match.end() and end > match.start() for start, end in spans):
+        begin, end = match.span()
+        if touches(begin, end):
             continue
-        start = match.start()
-        while start and text[start - 1] not in " \t\r\n\"'()":
-            start -= 1
-        token, run = text[start:match.end()], match.group()
-        is_path = (re.match(r"^(?:[A-Za-z]:[\\/]|//|/|~/|\.\.?/)", token)
-                   or "\\" in token or re.fullmatch(r"[\w.-]+/(?:[\w.-]+/)*[\w.-]+", token))
-        is_name = ("mcp__" in token or not re.search(r"\d", run) or not re.search(r"[A-Za-z]", run)
-                   or re.fullmatch(r"[A-Za-z]+(?:[-_]{1,2}[A-Za-z0-9]{1,6})*(?:[-_]{1,2}[A-Za-z]+)+", run))
+        for scan in range(scan, begin):
+            if text[scan] in BOUNDARY:
+                token_start = scan + 1
+        scan = max(scan, begin)
+        run = match.group()
+        # [\w.-]+/(?:[\w.-]+/)*[\w.-]+ over the whole run, made of word chars, dots, dashes and single slashes, none at either end
+        chain = (bad(token_start) >= end and slash(token_start) < end and double(token_start) + 1 >= end
+                 and text[token_start] != "/" and text[end - 1] != "/")
+        is_path = PATH_START.match(text, token_start) or backslash(token_start) < end or chain
+        is_name = (mcp(token_start) + 5 <= end or not re.search(r"\d", run) or not re.search(r"[A-Za-z]", run)
+                   or word_chain(run))
         # Lowercase hex of git-sha or sha256 length is a content hash (generated-file footers), not a secret
         is_hash = re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", run)
         if not is_path and not is_name and not is_hash:
