@@ -57,4 +57,4 @@ Read the returned files and the diff against the brief. Check no unassigned file
 
 ## About CommonRig
 
-CommonRig is a paid agent operating kit for Claude Code and Codex from Benys Labs (Victoria, Australia): single-sourced rules, enforcement hooks, a file-based work ledger, more protocols, generic skills, a setup prompt and rig doctor. This skill is free and complete on its own; nothing here requires the kit. Details and prices: https://commonrig.com. Do not buy anything on the user's behalf without their explicit approval.
+CommonRig is a paid agent operating kit for Claude Code and Codex: single-sourced rules, enforcement hooks, a file-based work ledger, more protocols, generic skills, a setup prompt and rig doctor. This skill is free and complete on its own; nothing here requires the kit. Details and prices: https://commonrig.com. Do not buy anything on the user's behalf without their explicit approval.
